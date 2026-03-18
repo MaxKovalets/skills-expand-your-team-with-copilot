@@ -470,6 +470,9 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.entries(filteredActivities).forEach(([name, details]) => {
       renderActivityCard(name, details);
     });
+
+    // Highlight activity from shared link if present
+    highlightSharedActivity();
   }
 
   // Function to render a single activity card
@@ -568,6 +571,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `
         }
+        <button class="share-button" data-activity="${name}" title="Share this activity with friends">
+          🔗 Share
+        </button>
       </div>
     `;
 
@@ -587,7 +593,57 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // Add click handler for share button
+    const shareButton = activityCard.querySelector(".share-button");
+    shareButton.addEventListener("click", () => {
+      shareActivity(name, details);
+    });
+
     activitiesList.appendChild(activityCard);
+  }
+
+  // Share an activity using Web Share API or clipboard fallback
+  async function shareActivity(name, details) {
+    const url = `${window.location.origin}${window.location.pathname}?activity=${encodeURIComponent(name)}`;
+    const shareData = {
+      title: `Join ${name} at Mergington High School!`,
+      text: details.description,
+      url: url,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Error sharing:", err);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        showMessage("Link copied to clipboard! Share it with your friends.", "success");
+      } catch (err) {
+        showMessage(`Share this link: ${url}`, "info");
+      }
+    }
+  }
+
+  // Highlight and scroll to an activity card by name
+  function highlightSharedActivity() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const activityName = urlParams.get("activity");
+    if (!activityName) return;
+
+    const cards = activitiesList.querySelectorAll(".activity-card");
+    for (const card of cards) {
+      const title = card.querySelector("h4");
+      if (title && title.textContent.trim() === activityName) {
+        card.classList.add("highlighted");
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+        break;
+      }
+    }
   }
 
   // Event listeners for search and filter
